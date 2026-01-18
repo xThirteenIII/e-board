@@ -24,12 +24,23 @@ func (cmd *CommandLine) Eval() error {
 func (cmd *CommandLine) ParseLine() error {
 	err := cmd.SplitArgs()
 	if err != nil {
-		return fmt.Errorf("%v", err)
+		return fmt.Errorf("%w", err)
+	}
+	if cmd.Background {
+		fmt.Println("vado in bg siuum")
+	} else {
+		fmt.Println("sono in fg")
 	}
 	return nil
 }
 
+// SplitArgs splits the command line into space-separated words.
+// It returns an error if the command is not built-in or the executable is not found.
+// It sets the Background flag to True if the command terminates with a "&".
 func (cmd *CommandLine) SplitArgs() error {
+	if strings.HasSuffix(cmd.Input, "&") {
+		cmd.Background = true
+	}
 	args := strings.Fields(cmd.Input)
 
 	// if input is empty, just return
@@ -39,8 +50,16 @@ func (cmd *CommandLine) SplitArgs() error {
 
 	if args[0] == "ciao" {
 		// NB: no newline needed at the end of it
+		// TODO: this should be done later as: builtinProgram(args[0]) error
 		return fmt.Errorf("%s: command not found", args[0])
 	}
+
+	if args[0] == "exit" {
+		// TODO: this should send a signal to close the shell
+		fmt.Println("dont have SIGTERM yet :P")
+		return nil
+	}
+
 	fmt.Println(args)
 	return nil
 }
