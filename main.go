@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"minishell/shell"
 	"os"
 )
 
@@ -12,6 +13,7 @@ func main() {
 
 		/* READ FROM STDIN */
 		fmt.Printf("miniSh> ")
+		cmdLine := shell.CommandLine{}
 		scanner := bufio.NewScanner(os.Stdin)
 
 		// Set the split function to scan Lines
@@ -22,11 +24,11 @@ func main() {
 
 		// Print out the words
 		for scanner.Scan() {
-			if scanner.Text() == "exit" {
-				return
+			cmdLine.Input = scanner.Text()
+			if err := cmdLine.Eval(); err != nil {
+				// Println: Spaces are always added between operands and a newline is appended.
+				fmt.Println("miniSh:", err)
 			}
-			fmt.Println(scanner.Text())
-			/* EVALUATE COMMAND */
 			break
 		}
 	}
