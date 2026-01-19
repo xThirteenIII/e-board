@@ -60,6 +60,18 @@ func (cmd *CommandLine) SplitArgs() error {
 		return nil
 	}
 
-	fmt.Println(args)
+	// program arguments, exclude program name
+	cmd.Argv = args[1:]
+	// Exclude & if in bg
+	if cmd.Background {
+		// If single ampercend, remove it from Argv
+		if args[len(args)-1] == "&" {
+			cmd.Argv = cmd.Argv[:len(cmd.Argv)-1]
+		} else {
+			// otherwise just remove & from the arg string
+			cmd.Argv[len(cmd.Argv)-1] = strings.Replace(cmd.Argv[len(cmd.Argv)-1], "&", "", 1)
+		}
+	}
+	fmt.Println(cmd.Argv)
 	return nil
 }
