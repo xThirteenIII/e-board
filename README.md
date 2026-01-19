@@ -3,13 +3,12 @@
 
 ### **Why a shell?**
 I've always been in love with the terminal and its job.
-Recently I read "Just for Fun" by Linus Torvald, and I was fascinated by how he spent 5 months just to build  
-Linux 0.01. This included a terminal emulator and all the kernel. So to learn more about OS and how things work  
+Recently I read "Just for Fun" by Linus Torvald, and I was fascinated by how he spent 5 months just to build Linux 0.01. This included a terminal emulator and all the kernel. So to learn more about OS and how things work  
 at low level, I decided to build a basic shell in Go to understand how things work.  
 
 ### **Why a chessboard?**
 I'm a huge fan of Harry potter and watching the first one again for the 1Mth time, I had the idea to make an  
-automated self-moving board. Unfortunately that turns out to be costy, so I'll just start with a normal chessboard  
+automated self-moving board. Unfortunately that turns out to be expensive, so I'll just start with a normal chessboard  
 with sensors to process moves and send them to an online server (e.g. Chess.com).
 
 ### **How am I building it?**
