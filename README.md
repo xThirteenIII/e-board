@@ -1,7 +1,7 @@
 # Simple Shell in Go
 ## A POSIX-like base shell written in Go, to be used as a support for an electronic chessboard in the future.
 
-### **Why a shell?*
+### **Why a shell?**
 I've always been in love with the terminal and its job.
 Recently I read "Just for Fun" by Linus Torvald, and I was fascinated by how he spent 5 months just to build  
 Linux 0.01. This included a terminal emulator and all the kernel. So to learn more about OS and how things work  
