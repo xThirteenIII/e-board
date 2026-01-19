@@ -11,6 +11,6 @@ automated self-moving board. Unfortunately that turns out to be expensive, so I'
 with sensors to process moves and send them to an online server (e.g. Chess.com).
 
 ### **How am I building it?**
-I've started to read Computer Systems, A Programmer's Prospective. There's all I need. I'm **NOT** using Claude or GPT  
-because for me that's the only way not to learn stuff. Ofc i'm not a fool so **I AM** using GPT for knowing where to  
+I've started to read Computer Systems, A Programmer's Prospective. There's all I need. I'm **NOT** using Claude or GPT
+because for me that's the only way not to learn stuff. Ofc i'm not a fool so **I AM** using GPT for knowing where to
 look and to make the process faster. **CODE IT'S ALL WRITTEN BY ME THOUGH**
