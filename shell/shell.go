@@ -6,15 +6,25 @@ import (
 )
 
 type CommandLine struct {
-	Input      string
-	Argv       []string
-	Background bool
+	Input       string
+	Argv        []string
+	ProgramName string
+	Background  bool
 }
 
 // Eval evaluates the command line.
 // First it calls parseLine, then runs the BuiltInProgram() fn.
 func (cmd *CommandLine) Eval() error {
-	return cmd.ParseLine()
+	err := cmd.ParseLine()
+	if err != nil {
+		return err
+	}
+	err = BuiltInCommands(*cmd)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // ParseLine parses the CommandLine Input, by space-separator.
@@ -48,17 +58,7 @@ func (cmd *CommandLine) SplitArgs() error {
 		return nil
 	}
 
-	if args[0] == "ciao" {
-		// NB: no newline needed at the end of it
-		// TODO: this should be done later as: builtinProgram(args[0]) error
-		return fmt.Errorf("%s: command not found", args[0])
-	}
-
-	if args[0] == "exit" {
-		// TODO: this should send a signal to close the shell
-		fmt.Println("dont have SIGTERM yet :P")
-		return nil
-	}
+	cmd.ProgramName = args[0]
 
 	// program arguments, exclude program name
 	cmd.Argv = args[1:]
