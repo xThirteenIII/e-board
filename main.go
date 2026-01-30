@@ -9,7 +9,7 @@ import (
 
 func main() {
 
-	// Main loop.
+	// Main routine loop.
 	// Each iteration:
 	// * prints the prompt
 	// * scanner.Scan() calls os.Stdin.Read() and blocks the loop
@@ -46,18 +46,16 @@ func main() {
 		// We want to read just a line for the command.
 		// Thus an if is sufficient, we don't need a for loop.
 		// If the scanner has read succesfully user input up until '\n' then:
-		if scanner.Scan() {
 
-			// Save Input as string
-			// Text returns the current token, here the user command, from the input.
-			cmdLine.Input = scanner.Text()
+		// Save Input as string
+		// Text returns the current token, here the user command, from the input.
+		cmdLine.Input = scanner.Text()
 
-			/* EVALUATE COMMAND */
-			// Check for errors while Evaluating the command, then print it out.
-			// These errors do not terminate the shell.
-			if err := cmdLine.Eval(); err != nil {
-				fmt.Println("miniSh:", err)
-			}
+		/* EVALUATE COMMAND */
+		// Check for errors while Evaluating the command, then print it out.
+		// These errors do not terminate the shell.
+		if err := cmdLine.Eval(); err != nil {
+			fmt.Println("miniSh:", err)
 		}
 
 		// Check for errors during Scan. End of file is expected and not reported by Scan as an error.
