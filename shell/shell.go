@@ -14,6 +14,8 @@ type CommandLine struct {
 
 // Eval evaluates the command line.
 // First it calls parseLine, then runs the BuiltInProgram() fn.
+
+// WARNING: bug if the cmd is: oneWord&. Check it out.
 func (cmd *CommandLine) Eval() error {
 	err := cmd.ParseLine()
 	if err != nil {
