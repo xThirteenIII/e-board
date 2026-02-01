@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"minishell/shell"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -50,6 +51,10 @@ func main() {
 		// Save Input as string
 		// Text returns the current token, here the user command, from the input.
 		cmdLine.UserInput = scanner.Text()
+
+		// Remove leading and trailing whitespaces.
+		// Needed to handle "command & " cases.
+		cmdLine.UserInput = strings.TrimSpace(cmdLine.UserInput)
 
 		/* EVALUATE COMMAND */
 		// Check for errors while Evaluating the command, then print it out.
