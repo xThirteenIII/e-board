@@ -49,7 +49,7 @@ func main() {
 
 		// Save Input as string
 		// Text returns the current token, here the user command, from the input.
-		cmdLine.Input = scanner.Text()
+		cmdLine.UserInput = scanner.Text()
 
 		/* EVALUATE COMMAND */
 		// Check for errors while Evaluating the command, then print it out.
