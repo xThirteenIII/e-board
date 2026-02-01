@@ -3,6 +3,7 @@ package shell
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -26,8 +27,6 @@ func (cu CommandUnit) executeBuiltIn() error {
 	if cu.OpAfter == OpBackground {
 		fmt.Println("running in bg")
 	}
-
-	fmt.Println("running", command.Argv[0])
 
 	// Check program name
 	switch command.Argv[0] {
@@ -103,6 +102,21 @@ func (cu CommandUnit) executeBuiltIn() error {
 // builtInCommands executes builtin command. Returns false if not a builtin command.
 func (cu CommandUnit) executeExternal() error {
 	// run built in commands
+	progName := cu.Cmd.getProgramName()
+	args := cu.Cmd.getArgs()
+	filePath, err := exec.LookPath(progName)
+	if err != nil {
+		fmt.Printf("%s: command not found\n", progName)
+	}
+	cmd := exec.Command(filePath, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	// No background handling for now
+	err = cmd.Run()
+	if err != nil {
+		fmt.Println("last command exited with code:", err)
+	}
 
 	return nil
 }

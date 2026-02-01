@@ -47,19 +47,25 @@ func (cl *CommandLine) Eval() error {
 	// Get and assign each command unit. I.e. cmd + operator.
 	// Evaluate operators.
 	cl.getCommandUnits()
+	err := cl.checkCommandSyntax()
+	if err != nil {
+		return fmt.Errorf("%v", err)
+	}
 
 	// Run each command in the commands unit.
-	for _, CommandUnit := range cl.commands {
-		fmt.Println("got this: ", CommandUnit.Cmd, "op", CommandUnit.OpAfter)
-		if isBuiltinCommand(CommandUnit.Cmd.Argv[0]) {
-			err := CommandUnit.executeBuiltIn()
-			if err != nil {
-				fmt.Println(err)
-			}
-		} else {
-			err := CommandUnit.executeExternal()
-			if err != nil {
-				fmt.Println(err)
+	for _, cu := range cl.commands {
+
+		if len(cu.Cmd.Argv) > 0 {
+			if isBuiltinCommand(cu.Cmd.Argv[0]) {
+				err := cu.executeBuiltIn()
+				if err != nil {
+					fmt.Println(err)
+				}
+			} else {
+				err := cu.executeExternal()
+				if err != nil {
+					fmt.Println(err)
+				}
 			}
 		}
 	}
@@ -127,4 +133,18 @@ func (cl *CommandLine) getCommandUnits() {
 func (cl *CommandLine) Commands() []CommandUnit {
 
 	return cl.commands
+}
+
+// getCommandUnits reads the line from left to right.
+func (cl CommandLine) checkCommandSyntax() error {
+
+	// If a syntax error is found return an error.
+	for _, cu := range cl.commands {
+		if len(cu.Cmd.Argv) == 0 && cu.OpAfter == OpBackground {
+			return fmt.Errorf("syntax error near unexpected token '&'")
+		}
+	}
+	//TODO: handle singleton &
+
+	return nil
 }
