@@ -51,14 +51,16 @@ func (cl *CommandLine) Eval() error {
 	// Run each command in the commands unit.
 	for _, CommandUnit := range cl.commands {
 		fmt.Println("got this: ", CommandUnit.Cmd, "op", CommandUnit.OpAfter)
-		err, isBuiltIn := builtInCommands(CommandUnit)
-		if err != nil && isBuiltIn {
-			fmt.Println(err)
-			continue
-		}
-		if err == nil && !isBuiltIn {
-			fmt.Println("will run external cmds in the future")
-			continue
+		if isBuiltinCommand(CommandUnit.Cmd.Argv[0]) {
+			err := CommandUnit.executeBuiltIn()
+			if err != nil {
+				fmt.Println(err)
+			}
+		} else {
+			err := CommandUnit.executeExternal()
+			if err != nil {
+				fmt.Println(err)
+			}
 		}
 	}
 

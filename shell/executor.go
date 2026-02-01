@@ -7,13 +7,20 @@ import (
 	"strings"
 )
 
-// builtInCommands executes builtin command. Returns false if not a builtin command.
-func builtInCommands(cu CommandUnit) (error, bool) {
-	// run built in commands
+func isBuiltinCommand(s string) bool {
+	switch s {
+	case "pwd", "cd", "echo", "exit":
+		return true
+	default:
+		return false
+	}
+}
+
+func (cu CommandUnit) executeBuiltIn() error {
 
 	command := cu.Cmd
 	if len(command.Argv) == 0 {
-		return fmt.Errorf("shouldn't get argv length 0"), false
+		return fmt.Errorf("shouldn't get argv length 0")
 	}
 
 	if cu.OpAfter == OpBackground {
@@ -31,16 +38,16 @@ func builtInCommands(cu CommandUnit) (error, bool) {
 		// print working directory.
 		dir, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("pwd: %w", err), true
+			return fmt.Errorf("pwd: %w", err)
 		}
 		fmt.Println(dir)
-		return nil, true
+		return nil
 
 	case "exit":
 		// TODO: this should send a signal to close the shell
 		// If more than 1 arg, return an error.
 		if len(command.Argv) > 2 {
-			return fmt.Errorf("exit: too many arguments"), true
+			return fmt.Errorf("exit: too many arguments")
 		}
 
 		if len(command.Argv) == 1 {
@@ -52,17 +59,17 @@ func builtInCommands(cu CommandUnit) (error, bool) {
 		// return an error if is not a number
 		code, err := strconv.Atoi(command.Argv[1])
 		if err != nil {
-			return fmt.Errorf("exit: %s: numeric argument required", command.Argv[1]), true
+			return fmt.Errorf("exit: %s: numeric argument required", command.Argv[1])
 		}
 
 		os.Exit(code)
 
-		return nil, true
+		return nil
 	case "cd":
 
 		// If more than 1 arg, return an error.
 		if len(command.Argv) > 2 {
-			return fmt.Errorf("cd: too many arguments"), true
+			return fmt.Errorf("cd: too many arguments")
 		}
 
 		// If arg is empty, cd to $HOME
@@ -70,24 +77,32 @@ func builtInCommands(cu CommandUnit) (error, bool) {
 			home := os.Getenv("HOME")
 			err := os.Chdir(home)
 			if err != nil {
-				return fmt.Errorf("cd: %v", err), true
+				return fmt.Errorf("cd: %v", err)
 			}
-			return nil, true
+			return nil
 		}
 		err := os.Chdir(command.Argv[1])
 		if err != nil {
-			return fmt.Errorf("cd: %v", err), true
+			return fmt.Errorf("cd: %v", err)
 		}
-		return nil, true
+		return nil
 	case "echo":
 		if len(command.Argv) > 1 {
 			fmt.Println(strings.Join(command.Argv[1:], " "))
 		}
 
-		return nil, true
+		return nil
 
 		// NOT A BUILTIN COMMAND
 	default:
-		return nil, false
+		return nil
 	}
+
+}
+
+// builtInCommands executes builtin command. Returns false if not a builtin command.
+func (cu CommandUnit) executeExternal() error {
+	// run built in commands
+
+	return nil
 }
