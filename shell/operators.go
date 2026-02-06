@@ -1,5 +1,6 @@
 package shell
 
+// Operator tells the shell how to handle each command given before one.
 type Operator int
 
 const (

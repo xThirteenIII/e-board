@@ -10,14 +10,15 @@ type CommandLine struct {
 	UserInput string        // Unmodified user input
 }
 
-// CommandUnit is used to access every single command and the operator after.
+// A CommandUnit is made of a Command and the operator (&, ;, |) after the command.
 type CommandUnit struct {
 	Cmd     Command
 	OpAfter Operator
 }
 
-// Command is the underlying structure used for the arguments vector and
-// a background flag that tells if the CommandUnit has to run in the background.
+// A command is an executable unit, parsed form CommandLine.
+// It is composed by the argv vector: argv[0] being programName and argv[1:] being the arguments, if any.
+// Each command is a process. (builtin or execv)
 type Command struct {
 	Argv []string
 }
@@ -55,12 +56,16 @@ func (cl *CommandLine) Eval() error {
 	// Run each command in the commands unit.
 	for _, cu := range cl.commands {
 
+		// Given that there is at least one argument
 		if len(cu.Cmd.Argv) > 0 {
+
+			// Execute builtin program
 			if isBuiltinCommand(cu.Cmd.Argv[0]) {
 				err := cu.executeBuiltIn()
 				if err != nil {
 					fmt.Println(err)
 				}
+				// Or run external program (OS)
 			} else {
 				err := cu.executeExternal()
 				if err != nil {
@@ -69,7 +74,6 @@ func (cl *CommandLine) Eval() error {
 			}
 		}
 	}
-
 	return nil
 }
 

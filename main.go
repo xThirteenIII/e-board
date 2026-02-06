@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"minishell/shell"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 )
 
 func main() {
@@ -21,32 +23,56 @@ func main() {
 	// * if an error when reading the command occures, the program exits
 
 	// Create a new pointer to a Scanner struct.
+	/*
+	 *  Wrapping the unbuffered os.Stdin with a buffered scanner gives a convenient Scan method
+	 *  that advances the scanner to the next token; which is the next line in the default scanner.
+	 *  Production safe. Used by Github CLI.
+	 */
 	scanner := bufio.NewScanner(os.Stdin)
 
+	/*
+		At any point in time, there can be at most one pending signal of a particular type.
+		If a process has a pending signal of type k, then any subsequent signals of type
+		k sent to that process are not queued; they are simply discarded.
+		This is why sigCh is buffered with capacity 1.
+	*/
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh)
 	for {
+
+		// Handle Ctrl+C
+		go func() {
+			for sig := range sigCh {
+				switch sig {
+				case syscall.SIGINT:
+					_, err := os.Stdout.WriteString("\nminiSh>")
+					if err != nil {
+						os.Stderr.WriteString(err.Error())
+
+						// Don't wait for scanner.Scan, continue to next iteration
+						continue
+					}
+				default:
+				}
+			}
+		}()
 
 		// Print beautiful and original shell name.
 		fmt.Printf("miniSh> ")
 
+		// We want to read just a line for the command.
+		// Thus an if is sufficient, we don't need a for loop.
+		// This blocks until EOF (\n)
 		if !scanner.Scan() {
 			// EOF or error
 			// EOF: Scan() returns false and scanner.Err() == nil
 			break
 		}
 
+		// If the scanner has read succesfully user input up until '\n' then:
 		// Does this really need to be created each iteration?
 		// Yes, don't want any leftovers from previous commands.
 		cmdLine := shell.CommandLine{}
-
-		/*
-		 *  Wrapping the unbuffered os.Stdin with a buffered scanner gives a convenient Scan method
-		 *  that advances the scanner to the next token; which is the next line in the default scanner.
-		 *  Production safe. Used by Github CLI.
-		 */
-
-		// We want to read just a line for the command.
-		// Thus an if is sufficient, we don't need a for loop.
-		// If the scanner has read succesfully user input up until '\n' then:
 
 		// Save Input as string
 		// Text returns the current token, here the user command, from the input.
@@ -68,6 +94,6 @@ func main() {
 			fmt.Fprintln(os.Stderr, "error:", err)
 			os.Exit(1)
 		}
-	}
 
+	}
 }

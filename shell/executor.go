@@ -3,9 +3,9 @@ package shell
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 func isBuiltinCommand(s string) bool {
@@ -104,19 +104,39 @@ func (cu CommandUnit) executeExternal() error {
 	// run built in commands
 	progName := cu.Cmd.getProgramName()
 	args := cu.Cmd.getArgs()
-	filePath, err := exec.LookPath(progName)
+
+	fmt.Printf("executing %s:", progName)
+	// Combination of fork and exec, careful to be thread safe.
+	pid, err := syscall.ForkExec(
+		progName,
+		args,
+		&syscall.ProcAttr{
+			Files: []uintptr{os.Stdin.Fd(), os.Stderr.Fd(), os.Stdout.Fd()},
+			// Set process group id
+			Sys: &syscall.SysProcAttr{
+				Setpgid: true,
+			},
+			Env: os.Environ(),
+		})
+	/*
+		// ProcAttr holds attributes that will be applied to a new process started
+		// by [StartProcess].
+		type ProcAttr struct {
+			Dir   string    // Current working directory.
+			Env   []string  // Environment.
+			Files []uintptr // File descriptors.
+			Sys   *SysProcAttr
+		}
+	*/
 	if err != nil {
+		fmt.Printf("errno %d:", err)
 		fmt.Printf("%s: command not found\n", progName)
 	}
-	cmd := exec.Command(filePath, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	// No background handling for now
-	err = cmd.Run()
-	if err != nil {
-		fmt.Println("last command exited with code:", err)
-	}
+
+	fmt.Println("pid:", pid)
+
+	// WARNING: funny bug, if i edit this file in my minishell using text editor and saving the result, i will get
+	//			segmentation fault and invalid memory pointer
 
 	return nil
 }
