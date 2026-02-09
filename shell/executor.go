@@ -1,8 +1,10 @@
 package shell
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"syscall"
@@ -10,7 +12,7 @@ import (
 
 func isBuiltinCommand(s string) bool {
 	switch s {
-	case "pwd", "cd", "echo", "exit":
+	case "pwd", "cd", "echo", "exit", "builtin", "type":
 		return true
 	default:
 		return false
@@ -93,6 +95,26 @@ func (cu CommandUnit) executeBuiltIn() error {
 		return nil
 
 		// NOT A BUILTIN COMMAND
+	case "type":
+		if len(command.Argv) > 1 {
+			for _, t := range command.Argv[1:] {
+				if isBuiltinCommand(t) {
+					fmt.Printf("%s is a shell builtin\n", t)
+				} else {
+					bin, err := exec.LookPath(t)
+					if err != nil {
+						return fmt.Errorf("type: %v", err)
+					}
+					fmt.Printf("%s is %s\n", t, bin)
+				}
+			}
+		}
+		return nil
+	case "builtin":
+		fmt.Printf("builtin commands:\n- pwd\n- cd\n- echo\n- exit\n" +
+			"- builtin\n- type\n")
+		return nil
+
 	default:
 		return nil
 	}
@@ -105,38 +127,36 @@ func (cu CommandUnit) executeExternal() error {
 	progName := cu.Cmd.getProgramName()
 	args := cu.Cmd.getArgs()
 
-	fmt.Printf("executing %s:", progName)
-	// Combination of fork and exec, careful to be thread safe.
-	pid, err := syscall.ForkExec(
-		progName,
-		args,
-		&syscall.ProcAttr{
-			Files: []uintptr{os.Stdin.Fd(), os.Stderr.Fd(), os.Stdout.Fd()},
-			// Set process group id
-			Sys: &syscall.SysProcAttr{
-				Setpgid: true,
-			},
-			Env: os.Environ(),
-		})
-	/*
-		// ProcAttr holds attributes that will be applied to a new process started
-		// by [StartProcess].
-		type ProcAttr struct {
-			Dir   string    // Current working directory.
-			Env   []string  // Environment.
-			Files []uintptr // File descriptors.
-			Sys   *SysProcAttr
-		}
-	*/
-	if err != nil {
-		fmt.Printf("errno %d:", err)
-		fmt.Printf("%s: command not found\n", progName)
+	// Using exec.Command() to support windows OS.
+	// exec.Cmd is a sweet spot to handle also process group id, FDs and other attributes if needed.
+	cmd := exec.Command(progName, args...)
+	// No child process created at this point.
+
+	// Set FDs
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
 	}
 
-	fmt.Println("pid:", pid)
+	// WARNING: bug, if a program e.g. 'cat' is called with no argument, that hangs, ctrl+c doesnt kill the process.
 
-	// WARNING: funny bug, if i edit this file in my minishell using text editor and saving the result, i will get
-	//			segmentation fault and invalid memory pointer
+	// Run creates a child process, forking and executing.
+	// It returns c.Wait() error
+	err := cmd.Run()
+	if errors.Is(err, &exec.ExitError{}) {
+		return fmt.Errorf("error while completing program: %v\n", err)
+	} else if err != nil {
+		return fmt.Errorf("error: %v", err)
+	}
+	CurrJob = CreateJob(cmd.Process.Pid)
+	// Print after error check to avoid invalid memory pointer.
+	fmt.Printf("shell pid: %d\n", os.Getpid())
+	fmt.Printf("shell gid: %d\n", os.Getgid())
+	fmt.Printf("child pid: %d\n", cmd.Process.Pid)
+	fmt.Printf("child pid w/ sate: %d\n", cmd.ProcessState.Pid())
+	fmt.Printf("child gid: %d\n", cmd.SysProcAttr.Pgid)
 
 	return nil
 }

@@ -45,6 +45,12 @@ func main() {
 			for sig := range sigCh {
 				switch sig {
 				case syscall.SIGINT:
+					if shell.CurrJob != nil {
+						err := syscall.Kill(shell.CurrJob.PGID, syscall.SIGKILL)
+						if err != nil {
+							fmt.Printf("\nerror killing process with PID %d: %v", shell.CurrJob.PGID, err)
+						}
+					}
 					_, err := os.Stdout.WriteString("\nminiSh>")
 					if err != nil {
 						os.Stderr.WriteString(err.Error())
