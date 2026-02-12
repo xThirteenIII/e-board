@@ -132,31 +132,58 @@ func (cu CommandUnit) executeExternal() error {
 	cmd := exec.Command(progName, args...)
 	// No child process created at this point.
 
-	// Set FDs
+	// By default, the child has the same process group as the parent.
+	// If we want to change it we must use the setpgid(pid, pgid) function.
+	// Setpgid sets the process group of `pid` to `pgid`.
+	// setpgid(0, pgid), sets the PID of the current process in use to `pgid`.
+	//		e.g. current PID = 15333, current PGID = 15333.
+	//		setpgid(0, 15444) -> current PID = 15333, its PGID = 15444
+	// setpgid(pid, 0), the pid of the process specified by	`pid` is used also for `pgid`.
+	//		e.g.  current PGID = 15333.
+	//		setpgid(15545, 0) -> group ID of process 15545 becomes current PGID = 15333
+	// setpgid(0, 0), sets the current process ID as also the the group ID.
+	//		e.g. current PID = 15333, current PGID = 15333.
+	//		setpgid(0, 0) -> current PID = 15333, current PGID = 15333
+	// We want to set a new process group id, different from the parent (shell pgid),
+	// to avoid killing the shell process with exception SIGNALS.
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		// This simply tells that we want to set the group pid
+		Setpgid: true,
+		// Let's use the current process id (command child process) as the group id
+		Pgid: 0,
+		// Foreground places the child process group in the foreground.
+		// This implies Setpgid. The Ctty field must be set to
+		// the descriptor of the controlling TTY.
+		// Unlike Setctty, in this case Ctty must be a descriptor
+		// number in the parent process.
+	}
+	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
+
+	// WARNING: bug: when some programs like 'cat', who handle no args with passing to reading user input,
+	// ctrl+c does not kill the process.
+
+	// Start starts the specified command but does not wait for it to complete.
+	//
+	// If Start returns successfully, the c.Process field will be set.
+	//
+	// After a successful call to Start the [Cmd.Wait] method must be called in
+	// order to release associated system resources.
+	err := cmd.Start()
+	pgidChild, err := syscall.Getpgid(cmd.Process.Pid)
+	if err != nil {
+		return fmt.Errorf("couldn't get child group ID")
 	}
-
-	// WARNING: bug, if a program e.g. 'cat' is called with no argument, that hangs, ctrl+c doesnt kill the process.
-
-	// Run creates a child process, forking and executing.
-	// It returns c.Wait() error
-	err := cmd.Run()
+	CurrJob = CreateJob(pgidChild)
+	err = cmd.Wait()
 	if errors.Is(err, &exec.ExitError{}) {
 		return fmt.Errorf("error while completing program: %v\n", err)
 	} else if err != nil {
 		return fmt.Errorf("error: %v", err)
 	}
-	CurrJob = CreateJob(cmd.Process.Pid)
+	CurrJob = nil
 	// Print after error check to avoid invalid memory pointer.
-	fmt.Printf("shell pid: %d\n", os.Getpid())
-	fmt.Printf("shell gid: %d\n", os.Getgid())
-	fmt.Printf("child pid: %d\n", cmd.Process.Pid)
-	fmt.Printf("child pid w/ sate: %d\n", cmd.ProcessState.Pid())
-	fmt.Printf("child gid: %d\n", cmd.SysProcAttr.Pgid)
 
 	return nil
 }

@@ -120,7 +120,7 @@ func (cl *CommandLine) getCommandUnits() {
 
 	// Last field might end at EOF.
 	// Last field has always OpNone
-	// Last char whitespace is handled already in main package. User input is trimmed.
+	// Last char whitespace / multiple whitespaces is handled already in main package. User input is trimmed.
 	if start >= 0 {
 		spans = append(spans, span{start, len(cl.UserInput), OpNone})
 	}

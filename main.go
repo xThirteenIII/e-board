@@ -41,12 +41,19 @@ func main() {
 	for {
 
 		// Handle Ctrl+C
+		/*
+			Typing Ctrl+C at the keyboard causes the main loop to send a SIGINT signal to
+			every process in the foreground process group. In the default case, the result is to
+			terminate the foreground job. Similarly, typing Ctrl+Z causes the shell loop to send a
+			SIGTSTP signal to every process in the foreground process group. In the default
+			case, the result is to stop (suspend) the foreground job.
+		*/
 		go func() {
 			for sig := range sigCh {
 				switch sig {
 				case syscall.SIGINT:
 					if shell.CurrJob != nil {
-						err := syscall.Kill(shell.CurrJob.PGID, syscall.SIGKILL)
+						err := syscall.Kill(-shell.CurrJob.PGID, syscall.SIGKILL)
 						if err != nil {
 							fmt.Printf("\nerror killing process with PID %d: %v", shell.CurrJob.PGID, err)
 						}
