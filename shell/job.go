@@ -14,15 +14,10 @@ package shell
 	from one of the parent processes in the job
 */
 type Job struct {
-	PGID      int // list of process group ID
-	LeaderPID int
-	Commands  []CommandUnit
+	Pgid     int // list of process group ID
+	Status   string
+	Commands []CommandUnit
 }
 
-func CreateJob(pid int) *Job {
-	return &Job{
-		PGID: pid,
-	}
-}
-
-var CurrJob *Job
+// A slice is okay to handle jobs, since jobs will be very few.
+var JobTable []Job
