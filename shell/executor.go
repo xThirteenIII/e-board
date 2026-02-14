@@ -127,6 +127,8 @@ func (cu CommandUnit) executeExternal() error {
 	progName := cu.Cmd.getProgramName()
 	args := cu.Cmd.getArgs()
 
+	miniSh := GetMiniShell()
+
 	// Using exec.Command() to support windows OS.
 	// exec.Cmd is a sweet spot to handle also process group id, FDs and other attributes if needed.
 	cmd := exec.Command(progName, args...)
@@ -151,11 +153,8 @@ func (cu CommandUnit) executeExternal() error {
 		Setpgid: true,
 		// Let's use the current process id (command child process) as the group id
 		Pgid: 0,
-		// Foreground places the child process group in the foreground.
-		// This implies Setpgid. The Ctty field must be set to
-		// the descriptor of the controlling TTY.
-		// Unlike Setctty, in this case Ctty must be a descriptor
-		// number in the parent process.
+		// Foreground is buggy. For some reason it doesn't handle file descriptors well, and
+		// even using ctty stops the current job and the minishell exits.
 	}
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
@@ -170,20 +169,42 @@ func (cu CommandUnit) executeExternal() error {
 	//
 	// After a successful call to Start the [Cmd.Wait] method must be called in
 	// order to release associated system resources.
+	// If command has to run in background
+	// Start the command process
 	err := cmd.Start()
 	pgidChild, err := syscall.Getpgid(cmd.Process.Pid)
 	if err != nil {
 		return fmt.Errorf("couldn't get child group ID")
 	}
-	CurrJob = CreateJob(pgidChild)
-	err = cmd.Wait()
-	if errors.Is(err, &exec.ExitError{}) {
-		return fmt.Errorf("error while completing program: %v\n", err)
-	} else if err != nil {
-		return fmt.Errorf("error: %v", err)
+
+	// TODO: handle multiple commands that belong to a single job
+
+	// If the job is foreground
+	if cu.OpAfter != OpBackground {
+
+		miniSh.AddForegroundJob(Job{
+			Pgid:     pgidChild,
+			Status:   "Running",
+			Commands: nil,
+		})
+		// Parent wait for job to terminate
+		err = cmd.Wait()
+		if errors.Is(err, &exec.ExitError{}) {
+			return fmt.Errorf("error while completing program: %v\n", err)
+		} else if err != nil {
+			return fmt.Errorf("error: %v", err)
+		}
+		// If the job has to run in the background
+	} else {
+		// Add to job table on
+		// TODO: handle job statuses better
+		miniShell.bgJobs = append(miniShell.bgJobs, Job{
+			Pgid:     pgidChild,
+			Status:   "Running",
+			Commands: []CommandUnit{cu},
+		})
+		// Don't wait for job to finish
 	}
-	CurrJob = nil
-	// Print after error check to avoid invalid memory pointer.
 
 	return nil
 }
