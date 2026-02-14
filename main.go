@@ -38,6 +38,12 @@ func main() {
 	*/
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh)
+	// Init minishell struct
+	// Init fgJobs and bgJobs to slices of capacity 32. At most 32 jobs
+
+	// Global variable to handle minishell.
+	// TODO: check if there's better ways to do it.
+	shell.InitMiniShell()
 	for {
 
 		// Handle Ctrl+C
@@ -52,10 +58,15 @@ func main() {
 			for sig := range sigCh {
 				switch sig {
 				case syscall.SIGINT:
-					if shell.CurrJob != nil {
-						err := syscall.Kill(-shell.CurrJob.PGID, syscall.SIGKILL)
-						if err != nil {
-							fmt.Printf("\nerror killing process with PID %d: %v", shell.CurrJob.PGID, err)
+					// If there's foreground jobs, send a signal to every fg group
+					if len(shell.GetForegroundJobs()) > 0 {
+						for _, pgid := range shell.GetUniqueFgPgids() {
+							//fmt.Printf("\nshell pid: %d\nshell pgid: %d\njob pigd: %d", shell.GetMiniShellPid(), shell.GetMiniShellPgid(), pgid)
+							err := syscall.Kill(-pgid, syscall.SIGKILL)
+							if err != nil {
+								fmt.Printf("\nerror killing processes in pgid:  %d: %v", pgid, err)
+							}
+
 						}
 					}
 					_, err := os.Stdout.WriteString("\nminiSh>")
