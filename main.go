@@ -56,22 +56,20 @@ func main() {
 			case, the result is to stop (suspend) the foreground job.
 		*/
 		go func() {
+
+			// Signal handling
 			for sig := range sigCh {
 				switch sig {
 				case syscall.SIGINT:
 					// If there's foreground jobs, send a signal to every fg group
 					fgJob := miniSh.GetForegroundJob()
-					err := syscall.Kill(-fgJob.Pgid, syscall.SIGKILL)
-					if err != nil {
-						fmt.Printf("\nerror killing processes in pgid:  %d: %v", fgJob.Pgid, err)
+					if fgJob != nil {
+						err := syscall.Kill(-fgJob.Pgid, syscall.SIGKILL)
+						if err != nil {
+							fmt.Printf("\nerror killing processes in pgid:  %d: %v", fgJob.Pgid, err)
+						}
 					}
-
-					_, err = os.Stdout.WriteString("\nminiSh>")
-					if err != nil {
-
-						// Don't wait for scanner.Scan, continue to next iteration
-						continue
-					}
+					fmt.Println("")
 				default:
 				}
 			}

@@ -63,13 +63,13 @@ func (cl *CommandLine) Eval() error {
 			if isBuiltinCommand(cu.Cmd.Argv[0]) {
 				err := cu.executeBuiltIn()
 				if err != nil {
-					fmt.Println(err)
+					return err
 				}
 				// Or run external program (OS)
 			} else {
 				err := cu.executeExternal()
 				if err != nil {
-					fmt.Println(err)
+					return err
 				}
 			}
 		}

@@ -6,7 +6,7 @@ import (
 )
 
 type shell struct {
-	fgJob  Job   // active foreground job
+	fgJob  *Job  // active foreground job
 	bgJobs []Job // list of jobs in the background
 	pid    int   // shell process id
 	pgid   int   // shell group process id
@@ -35,7 +35,7 @@ func (ms *shell) RemoveForegroundJob() {
 }
 
 func removeFgJob() {
-	miniShell.fgJob = Job{}
+	miniShell.fgJob = nil
 }
 
 func AddBackgroundJob(j Job) error {
@@ -43,7 +43,7 @@ func AddBackgroundJob(j Job) error {
 }
 
 func addForegroundJob(j Job) {
-	miniShell.fgJob = j
+	miniShell.fgJob = &j
 }
 
 func addBackgroundJob(j Job) error {
@@ -58,7 +58,7 @@ func (ms shell) GetBackgroundJobs() []Job {
 	return miniShell.bgJobs
 }
 
-func (ms shell) GetForegroundJob() Job {
+func (ms shell) GetForegroundJob() *Job {
 	return miniShell.fgJob
 }
 

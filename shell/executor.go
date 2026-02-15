@@ -1,7 +1,6 @@
 package shell
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -123,7 +122,6 @@ func (cu CommandUnit) executeBuiltIn() error {
 
 // builtInCommands executes builtin command. Returns false if not a builtin command.
 func (cu CommandUnit) executeExternal() error {
-	// run built in commands
 	progName := cu.Cmd.getProgramName()
 	args := cu.Cmd.getArgs()
 
@@ -136,16 +134,6 @@ func (cu CommandUnit) executeExternal() error {
 
 	// By default, the child has the same process group as the parent.
 	// If we want to change it we must use the setpgid(pid, pgid) function.
-	// Setpgid sets the process group of `pid` to `pgid`.
-	// setpgid(0, pgid), sets the PID of the current process in use to `pgid`.
-	//		e.g. current PID = 15333, current PGID = 15333.
-	//		setpgid(0, 15444) -> current PID = 15333, its PGID = 15444
-	// setpgid(pid, 0), the pid of the process specified by	`pid` is used also for `pgid`.
-	//		e.g.  current PGID = 15333.
-	//		setpgid(15545, 0) -> group ID of process 15545 becomes current PGID = 15333
-	// setpgid(0, 0), sets the current process ID as also the the group ID.
-	//		e.g. current PID = 15333, current PGID = 15333.
-	//		setpgid(0, 0) -> current PID = 15333, current PGID = 15333
 	// We want to set a new process group id, different from the parent (shell pgid),
 	// to avoid killing the shell process with exception SIGNALS.
 	cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -172,6 +160,9 @@ func (cu CommandUnit) executeExternal() error {
 	// If command has to run in background
 	// Start the command process
 	err := cmd.Start()
+	if err != nil {
+		return fmt.Errorf("%s: command not found", progName)
+	}
 	pgidChild, err := syscall.Getpgid(cmd.Process.Pid)
 	if err != nil {
 		return fmt.Errorf("couldn't get child group ID")
@@ -183,17 +174,12 @@ func (cu CommandUnit) executeExternal() error {
 	if cu.OpAfter != OpBackground {
 
 		miniSh.AddForegroundJob(Job{
-			Pgid:     pgidChild,
-			Status:   "Running",
-			Commands: nil,
+			Pgid:   pgidChild,
+			Status: "Running",
 		})
 		// Parent wait for job to terminate
 		err = cmd.Wait()
-		if errors.Is(err, &exec.ExitError{}) {
-			return fmt.Errorf("error while completing program: %v\n", err)
-		} else if err != nil {
-			return fmt.Errorf("error: %v", err)
-		}
+		miniSh.fgJob = nil
 		// If the job has to run in the background
 	} else {
 		// Add to job table on
