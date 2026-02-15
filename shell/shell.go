@@ -6,17 +6,16 @@ import (
 )
 
 type shell struct {
-	fgJobs []Job
-	bgJobs []Job
-	pid    int
-	pgid   int
+	fgJob  Job   // active foreground job
+	bgJobs []Job // list of jobs in the background
+	pid    int   // shell process id
+	pgid   int   // shell group process id
 }
 
-var miniShell *shell
+var miniShell *shell // miniShell global var to be accessed acrossed packages
 
 func InitMiniShell() {
 	miniShell = &shell{
-		fgJobs: make([]Job, 0, 32),
 		bgJobs: make([]Job, 0, 32),
 		pid:    os.Getpid(),
 		pgid:   os.Getgid(),
@@ -27,40 +26,44 @@ func GetMiniShell() *shell {
 	return miniShell
 }
 
-func (ms *shell) AddForegroundJob(j Job) error {
-	return addForegroundJob(j)
+func (ms *shell) AddForegroundJob(j Job) {
+	addForegroundJob(j)
+}
+
+func (ms *shell) RemoveForegroundJob() {
+	removeFgJob()
+}
+
+func removeFgJob() {
+	miniShell.fgJob = Job{}
 }
 
 func AddBackgroundJob(j Job) error {
 	return addBackgroundJob(j)
 }
 
-func addForegroundJob(j Job) error {
-	if len(miniShell.fgJobs) == 32 {
-		return fmt.Errorf("Max job capacity reached")
-	}
-	miniShell.fgJobs = append(miniShell.fgJobs, j)
-	//fmt.Println("fgJobs in miniShell:", miniShell.fgJobs)
-	return nil
+func addForegroundJob(j Job) {
+	miniShell.fgJob = j
 }
 
 func addBackgroundJob(j Job) error {
-	if len(miniShell.fgJobs) == 32 {
+	if len(miniShell.bgJobs) == 32 {
 		return fmt.Errorf("Max job capacity reached")
 	}
 	miniShell.bgJobs = append(miniShell.bgJobs, j)
 	return nil
 }
 
-func GetBackgroundJobs() []Job {
+func (ms shell) GetBackgroundJobs() []Job {
 	return miniShell.bgJobs
 }
 
-func GetForegroundJobs() []Job {
-	return miniShell.fgJobs
+func (ms shell) GetForegroundJob() Job {
+	return miniShell.fgJob
 }
 
 // GetUniqueFgPgids returns a slice of unique pgids, from the foreground Jobs slice.
+/*
 func GetUniqueFgPgids() []int {
 
 	// If there is no foreground jobs, return nil.
@@ -88,6 +91,7 @@ func GetUniqueFgPgids() []int {
 	return pgids
 
 }
+*/
 
 func GetMiniShellPid() int {
 	return miniShell.pid

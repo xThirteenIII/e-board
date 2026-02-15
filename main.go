@@ -44,6 +44,7 @@ func main() {
 	// Global variable to handle minishell.
 	// TODO: check if there's better ways to do it.
 	shell.InitMiniShell()
+	miniSh := shell.GetMiniShell()
 	for {
 
 		// Handle Ctrl+C
@@ -59,19 +60,14 @@ func main() {
 				switch sig {
 				case syscall.SIGINT:
 					// If there's foreground jobs, send a signal to every fg group
-					if len(shell.GetForegroundJobs()) > 0 {
-						for _, pgid := range shell.GetUniqueFgPgids() {
-							//fmt.Printf("\nshell pid: %d\nshell pgid: %d\njob pigd: %d", shell.GetMiniShellPid(), shell.GetMiniShellPgid(), pgid)
-							err := syscall.Kill(-pgid, syscall.SIGKILL)
-							if err != nil {
-								fmt.Printf("\nerror killing processes in pgid:  %d: %v", pgid, err)
-							}
-
-						}
-					}
-					_, err := os.Stdout.WriteString("\nminiSh>")
+					fgJob := miniSh.GetForegroundJob()
+					err := syscall.Kill(-fgJob.Pgid, syscall.SIGKILL)
 					if err != nil {
-						os.Stderr.WriteString(err.Error())
+						fmt.Printf("\nerror killing processes in pgid:  %d: %v", fgJob.Pgid, err)
+					}
+
+					_, err = os.Stdout.WriteString("\nminiSh>")
+					if err != nil {
 
 						// Don't wait for scanner.Scan, continue to next iteration
 						continue
