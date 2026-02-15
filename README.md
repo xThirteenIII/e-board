@@ -19,4 +19,6 @@ look and to make the process faster, but i still like StackOverflow better.
 
 ### **Where i'm at so far**
 I have implemented basic built-in commands such as 'echo', 'pwd', 'cd', 'exit', 'type'. 
-For external commands, I use the exec Go package. I tried to use syscall package too, but syscall.ForkExec() felt like too much headaches to deal with at the moment. The exec.Command{} and exec.Run() / Start() functions give me all flexibility I need with a nice wrapper. Each command line is parsed into a slice of command + operatorAfter, that is the operator, if any, that follows a command (&, |, >, <). At the moment, I'm arguing with processes, PIDs and syscall.SIGNALS to handle background jobs and being sure not to have zombie processes around.
+For external commands, I use the exec Go package. I tried to use syscall package too, but syscall.ForkExec() felt like too much headaches to deal with at the moment.  
+The exec.Command{}, exec.Start(), exec.Wait() functions give me all flexibility I need with a nice wrapper.  
+Each command line is parsed into a slice of command + operatorAfter, that is the operator, if any, that follows a command (&, |, >, <). At the moment, I'm arguing with processes, PIDs and syscall.SIGNALS to handle background jobs and being sure not to have zombie processes around.
