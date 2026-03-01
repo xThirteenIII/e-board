@@ -25,9 +25,11 @@ func (cu CommandUnit) executeBuiltIn() error {
 		return fmt.Errorf("shouldn't get argv length 0")
 	}
 
-	if cu.OpAfter == OpBackground {
-		fmt.Println("running in bg")
-	}
+	// For now, I don't care about background jobs for builtin programs.
+	// I'll just execute them and that's it.
+
+	// if cu.OpAfter == OpBackground {
+	// }
 
 	// Check program name
 	switch command.Argv[0] {
@@ -148,8 +150,26 @@ func (cu CommandUnit) executeExternal() error {
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 
-	// WARNING: bug: when some programs like 'cat', who handle no args with passing to reading user input,
-	// ctrl+c does not kill the process.
+	//WARNING:  BUG when using nvim or other editors or commands that need a true tty to perform.
+	//          Killing the group kills also the shell, might be that the process is assigned
+	//          shell group process id automatically. Gotta investigate!
+
+	// Handle race conditions with a mutex.
+	// This is to avoid that the SIGCHLD handler tries to delete a job from the
+	// background jobs slice, without the parent having added the job yet.
+	// E.g.: ls &
+	// child command ls terminates and SIGCHLD handler calls deletejob()
+	// before the append to background jobs happens.
+	// We might run the code a billion times without a problem, but then trigger a race
+	// the next one.
+	// This would be true here if it the handler in the switch case in the main.go file was
+	// responsible for deleting jobs from the slice. But it's actually the PrintJobDone method
+	// at the end of the main for{} loop. I actually don't know for now whether it's correct or not,
+	// but it works.
+
+	// Lock bgJob
+	miniSh.mu.Lock()
+	defer miniSh.mu.Unlock()
 
 	// Start starts the specified command but does not wait for it to complete.
 	//
@@ -159,37 +179,40 @@ func (cu CommandUnit) executeExternal() error {
 	// order to release associated system resources.
 	// If command has to run in background
 	// Start the command process
+	// Start does fork + execve
 	err := cmd.Start()
 	if err != nil {
 		return fmt.Errorf("%s: command not found", progName)
 	}
 	pgidChild, err := syscall.Getpgid(cmd.Process.Pid)
 	if err != nil {
-		return fmt.Errorf("couldn't get child group ID")
+		return fmt.Errorf("couldn't get child process group ID")
 	}
-
-	// TODO: handle multiple commands that belong to a single job
+	// TODO: check sleep command behaviour, which actually listens to input while sleeping and puts the
+	// command in queue
 
 	// If the job is foreground
 	if cu.OpAfter != OpBackground {
 
 		miniSh.AddForegroundJob(Job{
-			Pgid:   pgidChild,
-			Status: "Running",
+			Pgid:     pgidChild,
+			Status:   "Running",
+			Finished: false,
 		})
-		// Parent wait for job to terminate
+		// Parent waits for job to terminate
+		// NOTE: ALL SYS resources are freed by Wait
 		err = cmd.Wait()
-		miniSh.fgJob = nil
 		// If the job has to run in the background
 	} else {
-		// Add to job table on
+		// Add to background job table
 		// TODO: handle job statuses better
 		miniShell.bgJobs = append(miniShell.bgJobs, Job{
 			Pgid:     pgidChild,
 			Status:   "Running",
-			Commands: []CommandUnit{cu},
+			Command:  cu,
+			Finished: false,
 		})
-		// Don't wait for job to finish
+		fmt.Printf("[%d] %d\n", len(miniShell.bgJobs), miniShell.bgJobs[len(miniSh.bgJobs)-1].Pgid)
 	}
 
 	return nil
