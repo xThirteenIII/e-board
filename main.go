@@ -13,6 +13,9 @@ import (
 // NOTE: cat penso trasferisca poi a stdin, per questo rimane stuck. SIGCHLD viene mandato appena
 // dopo cat viene eseguito. I comandi in input durante lo "stuck time" sono bufferati e poi eseguiti,
 // quando si killa cat, che viene killato solo con sudo kill -KILL
+const (
+	SHELLNAME = "miSh"
+)
 
 func main() {
 
@@ -98,8 +101,8 @@ func main() {
 					miniSh.RemoveForegroundJob()
 				}
 				fmt.Printf("\n")
-				// Stop from scanning
 				stopCh <- struct{}{}
+				// Stop from scanning
 				// NOTE: after a process is terminated by SIGINT, a SIGCHLD signal is sent by the kernel
 				// Printf is said not to be async-signal-safe, in CSAPP 8.5.5, but we don't care atm.
 			// SIGCHLD handler
@@ -113,7 +116,6 @@ func main() {
 					Wait4 → reap sleep1
 					handler ends → sleep2/sleep3 will be zombies forever until miniSh is exited
 				*/
-				//fmt.Println("sto a ricevere sigchld")
 
 				for {
 					if len(miniSh.GetBackgroundJobs()) == 0 {
@@ -132,8 +134,14 @@ func main() {
 		}
 	}()
 
+	hostName := os.Getenv("USER")
+	// If there's no USER variable, set default user
+	if hostName == "" {
+		hostName = "user"
+	}
+	prompt := "[" + hostName + "@" + SHELLNAME + "] $"
 	for {
-		fmt.Printf("miniSh> ")
+		fmt.Println(prompt)
 		select {
 		case line := <-lineCh:
 
